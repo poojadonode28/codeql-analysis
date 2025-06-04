@@ -1,0 +1,16 @@
+{
+  "version": "2.1.0",
+  "runs": [{
+    "results": [{
+      "ruleId": "js/hardcoded-credentials",
+      "message": { "text": "Hardcoded JWT secret found in auth.js" },
+      "locations": [{
+        "physicalLocation": {
+          "artifactLocation": { "uri": "src/js/main/auth/auth.js" },
+          "region": { "startLine": 9 }
+        }
+      }],
+      "level": "error"
+    }]
+  }]
+}

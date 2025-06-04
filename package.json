@@ -1,7 +1,7 @@
 {
   "name": "codeql-analysis-demo",
-  "version": "1.0.0",
-  "description": "CodeQL Analysis Demo Project",
+  "version": "1.0.0-security-scan",
+  "description": "CodeQL Analysis Demo Project with Security Vulnerabilities",
   "main": "src/js/main/app.js",
   "scripts": {
     "start": "node src/js/main/app.js",

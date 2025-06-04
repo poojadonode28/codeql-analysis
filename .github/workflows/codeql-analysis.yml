@@ -5,7 +5,6 @@ on:
     branches: [ "main", "develop" ]
   pull_request:
     branches: [ "main", "develop" ]
-
   workflow_dispatch:
 
 jobs:
@@ -21,6 +20,11 @@ jobs:
       fail-fast: false
       matrix:
         language: [ 'javascript', 'go', 'java' ]
+        include:
+          - language: javascript
+            queries: .github/codeql/custom-queries/js
+          - language: go
+            queries: .github/codeql/custom-queries/go
 
     steps:
     - name: Checkout repository
@@ -39,28 +43,29 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
+    - name: Install Dependencies
+      run: |
+        if [ "${{ matrix.language }}" == "javascript" ]; then
+          npm install
+        elif [ "${{ matrix.language }}" == "go" ]; then
+          go mod download
+          find . -type f -name "go.mod" -execdir go mod download \;
+        fi
+
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
       with:
         languages: ${{ matrix.language }}
-        queries: security-extended
+        queries: security-extended,security-and-quality,${{ matrix.queries }}
+        config-file: .github/codeql/codeql-config.yml
 
-    - name: Build Java
-      if: matrix.language == 'java'
+    - name: Build Packages
       run: |
-        if [ -f "pom.xml" ]; then
-          mvn clean install -DskipTests
-        elif [ -f "build.gradle" ]; then
-          ./gradlew build -x test
-        else
-          echo "No build file found. Using direct compilation."
-          mkdir -p target/classes
-          find src/main/java -name "*.java" -type f -exec javac -d target/classes {} +
+        if [ "${{ matrix.language }}" == "java" ]; then
+          find . -type f -name "pom.xml" -execdir mvn clean install -DskipTests \;
+        elif [ "${{ matrix.language }}" == "go" ]; then
+          go build ./...
         fi
-
-    - name: Autobuild
-      if: matrix.language == 'go'
-      uses: github/codeql-action/autobuild@v3
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
@@ -69,19 +74,39 @@ jobs:
         output: "${{ github.workspace }}/sarif-results"
       continue-on-error: true
 
-    - name: Display SARIF File Location
+    - name: Process Package-Specific Results
       run: |
-        echo "=== SARIF File Information ==="
-        echo "Workspace: ${{ github.workspace }}"
-        echo "Looking for SARIF files in sarif-results directory:"
-        ls -la "${{ github.workspace }}/sarif-results"
-        echo "=== Language: ${{ matrix.language }} ==="
-        echo "Detailed SARIF file list:"
-        find "${{ github.workspace }}/sarif-results" -name "*${{ matrix.language }}*.sarif" -type f -exec ls -l {} \;
+        echo "=== Package Analysis Summary ==="
+        echo "Language: ${{ matrix.language }}"
         
-        # Display SARIF content
-        echo "=== SARIF Content ==="
-        for file in $(find "${{ github.workspace }}/sarif-results" -name "*${{ matrix.language }}*.sarif" -type f); do
-          echo "Content of $(basename $file):"
-          jq . "$file" || cat "$file"  # Try to pretty print JSON, fallback to raw output
+        # Find all SARIF files
+        sarif_files=$(find "${{ github.workspace }}/sarif-results" -name "*${{ matrix.language }}*.sarif" -type f)
+        
+        for file in $sarif_files; do
+          echo "Processing: $(basename $file)"
+          echo "----------------------------------------"
+          
+          # Group vulnerabilities by package
+          jq -r '
+            .runs[].results[] | 
+            select(.level == "error" or .level == "warning") |
+            . as $result |
+            $result.locations[0].physicalLocation.artifactLocation.uri |
+            capture("^(?<package>src/[^/]+/[^/]+)/.*$") |
+            . as $pkg |
+            "[\($result.level | ascii_upcase)] Package: \($pkg.package)\n  File: \($result.locations[0].physicalLocation.artifactLocation.uri):\($result.locations[0].physicalLocation.region.startLine)\n  Issue: \($result.message.text)"
+          ' "$file" || echo "Error processing SARIF file"
+          
+          # Count issues per package
+          echo -e "\nVulnerabilities by Package:"
+          jq -r '
+            .runs[].results[] |
+            select(.level == "error" or .level == "warning") |
+            .locations[0].physicalLocation.artifactLocation.uri |
+            capture("^(?<package>src/[^/]+/[^/]+)/.*$") |
+            .package
+          ' "$file" | sort | uniq -c | awk "{printf(\"  %s: %s issues\n\", \$2, \$1)}"
+          
+          echo "----------------------------------------"
         done
+

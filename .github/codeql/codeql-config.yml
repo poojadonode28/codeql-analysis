@@ -1,0 +1,53 @@
+name: "Package-Specific CodeQL Config"
+
+paths-ignore:
+  - '**/test/**'
+  - '**/tests/**'
+  - '**/spec/**'
+  - '**/node_modules/**'
+  - '**/vendor/**'
+
+paths:
+  - src/js/main
+  - src/go/pkg
+  - src/java/src/main
+
+query-filters:
+  - exclude:
+      problem.severity:
+        - warning
+      path:
+        - test
+        - spec
+
+javascript:
+  database:
+    exclude:
+      - '**/node_modules/**'
+  packages:
+    - name: "auth"
+      paths: 
+        - src/js/main/auth
+      severity: error
+    - name: "api"
+      paths:
+        - src/js/main/api
+      severity: error
+
+go:
+  packages:
+    - name: "database"
+      paths:
+        - src/go/pkg/database
+      severity: error
+    - name: "api"
+      paths:
+        - src/go/pkg/api
+      severity: error
+
+java:
+  packages:
+    - name: "com.example"
+      paths:
+        - src/java/src/main/java/com/example
+      severity: error 

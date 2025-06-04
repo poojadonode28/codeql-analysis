@@ -1,0 +1,16 @@
+{
+  "version": "2.1.0",
+  "runs": [{
+    "results": [{
+      "ruleId": "go/sql-injection",
+      "message": { "text": "SQL injection vulnerability in database query" },
+      "locations": [{
+        "physicalLocation": {
+          "artifactLocation": { "uri": "src/go/pkg/database/db.go" },
+          "region": { "startLine": 23 }
+        }
+      }],
+      "level": "error"
+    }]
+  }]
+}

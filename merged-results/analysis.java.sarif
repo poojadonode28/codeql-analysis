@@ -1,0 +1,16 @@
+{
+  "version": "2.1.0",
+  "runs": [{
+    "results": [{
+      "ruleId": "java/command-injection",
+      "message": { "text": "Command injection in process execution" },
+      "locations": [{
+        "physicalLocation": {
+          "artifactLocation": { "uri": "src/java/src/main/java/com/example/SecurityVulnerableApp.java" },
+          "region": { "startLine": 45 }
+        }
+      }],
+      "level": "error"
+    }]
+  }]
+}
