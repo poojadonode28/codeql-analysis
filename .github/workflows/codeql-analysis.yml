@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'javascript', 'go' ]
+        language: [ 'javascript', 'go', 'java' ]
 
     steps:
     - name: Checkout repository
@@ -39,7 +39,7 @@ jobs:
         queries: security-extended
 
     - name: Autobuild
-      if: matrix.language == 'go'
+      if: matrix.language == 'go' || matrix.language == 'java'
       uses: github/codeql-action/autobuild@v3
 
     - name: Perform CodeQL Analysis
