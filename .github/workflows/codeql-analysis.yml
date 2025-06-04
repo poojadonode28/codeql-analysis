@@ -35,7 +35,7 @@ jobs:
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
       with:
-        category: "/language:${{matrix.language}}/analysis"
+        category: "codeql-analysis/${{matrix.language}}"
         output: 'sarif-results'
 
     - name: Debug Environment
@@ -90,7 +90,7 @@ jobs:
       if: always()
       with:
         sarif_file: sarif-results/javascript.sarif
-        category: "/language:${{matrix.language}}/upload"
+        category: "codeql-upload/${{matrix.language}}"
 
     - name: Report Analysis Status
       if: always()
