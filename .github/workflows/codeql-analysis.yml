@@ -66,30 +66,28 @@ jobs:
           echo "Creating sarif-results directory"
           mkdir -p sarif-results
         fi
-        echo ""
-        
-        echo "=== CodeQL Database Info ==="
-        echo "Looking for CodeQL database:"
-        find $GITHUB_WORKSPACE -name "*.sarif" -o -name "*.zip" -type f 2>/dev/null
       if: always()
 
-    - name: Verify SARIF File
+    - name: Locate SARIF File
+      id: locate-sarif
       if: always()
       run: |
-        echo "=== SARIF File Verification ==="
-        for sarif in $(find . -name "*.sarif" -type f); do
-          echo "Found SARIF file: $sarif"
-          echo "File size: $(ls -lh $sarif | awk '{print $5}')"
-          echo "File contents preview (first 10 lines):"
-          head -n 10 $sarif
-          echo "---"
-        done
+        SARIF_FILE=$(find $GITHUB_WORKSPACE -name "*.sarif" -type f | head -n 1)
+        if [ -n "$SARIF_FILE" ]; then
+          echo "Found SARIF file: $SARIF_FILE"
+          echo "sarif_path=$SARIF_FILE" >> $GITHUB_OUTPUT
+          echo "File contents preview:"
+          head -n 10 "$SARIF_FILE"
+        else
+          echo "No SARIF file found!"
+          exit 1
+        fi
 
     - name: Upload SARIF results
       uses: github/codeql-action/upload-sarif@v3
-      if: always()
+      if: always() && steps.locate-sarif.outputs.sarif_path
       with:
-        sarif_file: sarif-results/javascript.sarif
+        sarif_file: ${{ steps.locate-sarif.outputs.sarif_path }}
         category: "codeql-upload/${{matrix.language}}"
 
     - name: Report Analysis Status
