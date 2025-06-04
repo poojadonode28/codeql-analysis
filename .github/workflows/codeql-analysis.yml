@@ -56,6 +56,7 @@ jobs:
           echo "No Java build file found. Creating a simple Java project structure."
           mkdir -p src/main/java
           javac $(find src/main/java -name "*.java") -d target/classes || true
+        fi
 
     - name: Autobuild
       if: matrix.language == 'go'
