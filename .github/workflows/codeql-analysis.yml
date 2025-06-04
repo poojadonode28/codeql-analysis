@@ -36,11 +36,12 @@ jobs:
       uses: github/codeql-action/analyze@v2
       with:
         category: "/language:${{matrix.language}}"
-        output: sarif-results
+        output: 'sarif-results'
 
     - name: Upload SARIF file
-      uses: actions/upload-artifact@v2.3.1
+      uses: actions/upload-artifact@v3
+      if: success()
       with:
         name: codeql-sarif-results
-        path: sarif-results
+        path: sarif-results/*.sarif
         retention-days: 7 
