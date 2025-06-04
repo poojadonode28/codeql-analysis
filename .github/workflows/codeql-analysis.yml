@@ -73,6 +73,18 @@ jobs:
         find $GITHUB_WORKSPACE -name "*.sarif" -o -name "*.zip" -type f 2>/dev/null
       if: always()
 
+    - name: Verify SARIF File
+      if: always()
+      run: |
+        echo "=== SARIF File Verification ==="
+        for sarif in $(find . -name "*.sarif" -type f); do
+          echo "Found SARIF file: $sarif"
+          echo "File size: $(ls -lh $sarif | awk '{print $5}')"
+          echo "File contents preview (first 10 lines):"
+          head -n 10 $sarif
+          echo "---"
+        done
+
     - name: Upload SARIF results
       uses: github/codeql-action/upload-sarif@v3
       if: always()
