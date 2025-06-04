@@ -35,8 +35,8 @@ jobs:
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
       with:
-        category: "codeql-analysis/${{matrix.language}}"
-        output: 'sarif-results'
+        category: "analysis-${{ github.run_id }}-${{ matrix.language }}"
+        output: sarif-results
 
     - name: Debug Environment
       run: |
@@ -75,7 +75,8 @@ jobs:
         SARIF_FILE=$(find $GITHUB_WORKSPACE -name "*.sarif" -type f | head -n 1)
         if [ -n "$SARIF_FILE" ]; then
           echo "Found SARIF file: $SARIF_FILE"
-          echo "sarif_path=$SARIF_FILE" >> $GITHUB_OUTPUT
+          cp "$SARIF_FILE" sarif-results/analysis-${{ github.run_id }}.sarif
+          echo "sarif_path=sarif-results/analysis-${{ github.run_id }}.sarif" >> $GITHUB_OUTPUT
           echo "File contents preview:"
           head -n 10 "$SARIF_FILE"
         else
@@ -88,7 +89,7 @@ jobs:
       if: always() && steps.locate-sarif.outputs.sarif_path
       with:
         sarif_file: ${{ steps.locate-sarif.outputs.sarif_path }}
-        category: "codeql-upload/${{matrix.language}}"
+        category: "upload-${{ github.run_id }}-${{ matrix.language }}"
 
     - name: Report Analysis Status
       if: always()
