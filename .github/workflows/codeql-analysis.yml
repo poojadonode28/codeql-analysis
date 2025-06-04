@@ -38,8 +38,16 @@ jobs:
         category: "/language:${{matrix.language}}"
         output: 'sarif-results'
 
+    - name: List SARIF files
+      run: |
+        echo "Current directory:"
+        pwd
+        echo "Contents of sarif-results directory:"
+        ls -la sarif-results/
+      if: success()
+
     - name: Upload SARIF file
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v3.1.2
       if: success()
       with:
         name: codeql-sarif-results
