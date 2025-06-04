@@ -23,6 +23,23 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
+        cache: 'maven'
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: java
+
+    - name: Build with Maven
+      run: mvn -B compile --file pom.xml
+
+    - name: Run tests
+      run: mvn test
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:java"
 
     - name: Build Java project
       run: mvn clean install
