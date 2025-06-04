@@ -55,6 +55,14 @@ app.get('/api/message', (req, res) => {
     res.send(`<div>${sanitizedMessage}</div>`);
 });
 
+// JavaScript file with intentional vulnerability
+app.get('/user/:id', (req, res) => {
+    // SECURITY ISSUE: SQL Injection vulnerability
+    const query = `SELECT * FROM users WHERE id = ${req.params.id}`;
+    // Execute query...
+    res.send('Query executed');
+});
+
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);

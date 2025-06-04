@@ -1,14 +1,21 @@
 {
-  "name": "codeql-analysis",
+  "name": "codeql-analysis-demo",
   "version": "1.0.0",
-  "description": "Sample application with security fixes",
-  "main": "src/app.js",
+  "description": "CodeQL Analysis Demo Project",
+  "main": "src/js/main/app.js",
   "scripts": {
-    "start": "node src/app.js"
+    "start": "node src/js/main/app.js",
+    "test": "jest"
   },
   "dependencies": {
     "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",
-    "xss": "^1.0.14"
+    "xss": "^1.0.14",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3"
   }
 } 
