@@ -34,8 +34,6 @@ jobs:
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
-      with:
-        category: "${{ github.workflow }}-${{ matrix.language }}-${{ github.run_id }}"
 
     - name: List SARIF files
       run: |
