@@ -39,7 +39,7 @@ jobs:
         output: sarif-results
 
     - name: Upload SARIF file
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v2.3.1
       with:
         name: codeql-sarif-results
         path: sarif-results
