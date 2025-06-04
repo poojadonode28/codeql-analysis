@@ -42,14 +42,20 @@ jobs:
       run: |
         echo "Current directory:"
         pwd
+        echo "Contents of workspace:"
+        ls -la
+        echo "Creating sarif-results directory if it doesn't exist:"
+        mkdir -p sarif-results
         echo "Contents of sarif-results directory:"
         ls -la sarif-results/
-      if: success()
+      if: always()
 
     - name: Upload SARIF file
-      uses: actions/upload-artifact@v3.1.2
-      if: success()
+      uses: actions/upload-artifact@0b7f8abb1508181956e8e162db98b7759f906006 # v3.1.2 stable SHA
+      if: always()
       with:
         name: codeql-sarif-results
-        path: sarif-results/*.sarif
+        path: |
+          sarif-results
+          *.sarif
         retention-days: 7 
