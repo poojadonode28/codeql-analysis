@@ -78,4 +78,10 @@ jobs:
         echo "=== Language: ${{ matrix.language }} ==="
         echo "Detailed SARIF file list:"
         find "${{ github.workspace }}/sarif-results" -name "*${{ matrix.language }}*.sarif" -type f -exec ls -l {} \;
-        cat "${{ github.workspace }}/sarif-results"
+        
+        # Display SARIF content
+        echo "=== SARIF Content ==="
+        for file in $(find "${{ github.workspace }}/sarif-results" -name "*${{ matrix.language }}*.sarif" -type f); do
+          echo "Content of $(basename $file):"
+          jq . "$file" || cat "$file"  # Try to pretty print JSON, fallback to raw output
+        done
