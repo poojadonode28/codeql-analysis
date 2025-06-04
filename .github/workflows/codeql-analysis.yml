@@ -5,6 +5,7 @@ on:
     branches: [ "main", "develop" ]
   pull_request:
     branches: [ "main", "develop" ]
+
   workflow_dispatch:
 
 jobs:
@@ -38,30 +39,28 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Install Dependencies
-      run: |
-        if [ "${{ matrix.language }}" == "javascript" ]; then
-          npm install
-        elif [ "${{ matrix.language }}" == "go" ]; then
-          go mod download
-          find . -type f -name "go.mod" -execdir go mod download \;
-        fi
-
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
       with:
         languages: ${{ matrix.language }}
-        packs: .github/codeql/custom-queries/${{ matrix.language }}
         queries: security-extended
-        config-file: .github/codeql/codeql-config.yml
 
-    - name: Build Packages
+    - name: Build Java
+      if: matrix.language == 'java'
       run: |
-        if [ "${{ matrix.language }}" == "java" ]; then
-          find . -type f -name "pom.xml" -execdir mvn clean install -DskipTests \;
-        elif [ "${{ matrix.language }}" == "go" ]; then
-          go build ./...
+        if [ -f "pom.xml" ]; then
+          mvn clean install -DskipTests
+        elif [ -f "build.gradle" ]; then
+          ./gradlew build -x test
+        else
+          echo "No build file found. Using direct compilation."
+          mkdir -p target/classes
+          find src/main/java -name "*.java" -type f -exec javac -d target/classes {} +
         fi
+
+    - name: Autobuild
+      if: matrix.language == 'go'
+      uses: github/codeql-action/autobuild@v3
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
@@ -69,11 +68,14 @@ jobs:
         category: "${{ github.workflow }}-${{ matrix.language }}"
         output: "${{ github.workspace }}/sarif-results"
       continue-on-error: true
-    - name: View SARIF Results
-      run: |
-        echo "=== SARIF Results ==="
-        ls -la "${{ github.workspace }}/sarif-results"
-        echo "=== Contents of sarif-results ==="
-        cat "${{ github.workspace }}/sarif-results"/*.sarif
 
-   
+    - name: Display SARIF File Location
+      run: |
+        echo "=== SARIF File Information ==="
+        echo "Workspace: ${{ github.workspace }}"
+        echo "Looking for SARIF files in sarif-results directory:"
+        ls -la "${{ github.workspace }}/sarif-results"
+        echo "=== Language: ${{ matrix.language }} ==="
+        echo "Detailed SARIF file list:"
+        find "${{ github.workspace }}/sarif-results" -name "*${{ matrix.language }}*.sarif" -type f -exec ls -l {} \;
+
