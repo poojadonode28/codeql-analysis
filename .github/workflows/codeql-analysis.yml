@@ -33,4 +33,14 @@ jobs:
         languages: ${{ matrix.language }}
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2 
+      uses: github/codeql-action/analyze@v2
+      with:
+        category: "/language:${{matrix.language}}"
+        output: sarif-results
+
+    - name: Upload SARIF file
+      uses: actions/upload-artifact@v3
+      with:
+        name: codeql-sarif-results
+        path: sarif-results
+        retention-days: 7 
