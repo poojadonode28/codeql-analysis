@@ -36,8 +36,20 @@ jobs:
       uses: github/codeql-action/analyze@v3
       with:
         category: "${{ github.workflow }}-${{ matrix.language }}"
+        output: "${{ github.workspace }}/sarif-results"
 
-    - name: List SARIF Results
+    - name: Display SARIF File Location
       run: |
-        echo "Looking for SARIF files in workspace:"
-        find $GITHUB_WORKSPACE -name "*.sarif" -type f -ls 
+        echo "=== SARIF File Information ==="
+        echo "Workspace: ${{ github.workspace }}"
+        echo "Looking for SARIF files in sarif-results directory:"
+        ls -la "${{ github.workspace }}/sarif-results"
+        echo "Full SARIF file paths:"
+        find "${{ github.workspace }}/sarif-results" -name "*.sarif" -type f
+
+    - name: Upload SARIF as Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: sarif-results
+        path: "${{ github.workspace }}/sarif-results/*.sarif"
+        retention-days: 1 
