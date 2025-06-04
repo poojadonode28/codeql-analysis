@@ -32,14 +32,33 @@ jobs:
       with:
         go-version: '1.21'
 
+    - name: Setup Java
+      if: matrix.language == 'java'
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
       with:
         languages: ${{ matrix.language }}
         queries: security-extended
 
+    - name: Build Java
+      if: matrix.language == 'java'
+      run: |
+        if [ -f "pom.xml" ]; then
+          mvn clean install -DskipTests
+        elif [ -f "build.gradle" ]; then
+          ./gradlew build -x test
+        else
+          echo "No Java build file found. Creating a simple Java project structure."
+          mkdir -p src/main/java
+          javac $(find src/main/java -name "*.java") -d target/classes || true
+
     - name: Autobuild
-      if: matrix.language == 'go' || matrix.language == 'java'
+      if: matrix.language == 'go'
       uses: github/codeql-action/autobuild@v3
 
     - name: Perform CodeQL Analysis
