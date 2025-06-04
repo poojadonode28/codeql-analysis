@@ -44,18 +44,14 @@ jobs:
         pwd
         echo "Contents of workspace:"
         ls -la
-        echo "Creating sarif-results directory if it doesn't exist:"
-        mkdir -p sarif-results
         echo "Contents of sarif-results directory:"
-        ls -la sarif-results/
+        ls -la sarif-results/ || echo "sarif-results directory not found"
+        find . -name "*.sarif" -type f
       if: always()
 
-    - name: Upload SARIF file
-      uses: actions/upload-artifact@0b7f8abb1508181956e8e162db98b7759f906006 # v3.1.2 stable SHA
+    - name: Upload SARIF results
+      uses: github/codeql-action/upload-sarif@v2
       if: always()
       with:
-        name: codeql-sarif-results
-        path: |
-          sarif-results
-          *.sarif
-        retention-days: 7 
+        sarif_file: sarif-results/javascript.sarif
+        category: "/language:javascript" 
