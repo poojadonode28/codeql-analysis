@@ -38,15 +38,39 @@ jobs:
         category: "/language:${{matrix.language}}"
         output: 'sarif-results'
 
-    - name: List SARIF files
+    - name: Debug Environment
       run: |
-        echo "Current directory:"
-        pwd
-        echo "Contents of workspace:"
+        echo "=== Environment Information ==="
+        echo "PWD: $(pwd)"
+        echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
+        echo "Runner OS: $(uname -a)"
+        echo ""
+        
+        echo "=== Directory Structure ==="
+        echo "Root directory contents:"
         ls -la
-        echo "Contents of sarif-results directory:"
-        ls -la sarif-results/ || echo "sarif-results directory not found"
-        find . -name "*.sarif" -type f
+        echo ""
+        
+        echo "=== Finding SARIF Files ==="
+        echo "Looking for .sarif files in all directories:"
+        find $GITHUB_WORKSPACE -name "*.sarif" -type f
+        echo ""
+        
+        echo "=== Sarif Directory Check ==="
+        if [ -d "sarif-results" ]; then
+          echo "sarif-results directory exists"
+          echo "Contents of sarif-results:"
+          ls -la sarif-results/
+        else
+          echo "sarif-results directory not found"
+          echo "Creating sarif-results directory"
+          mkdir -p sarif-results
+        fi
+        echo ""
+        
+        echo "=== CodeQL Database Info ==="
+        echo "Looking for CodeQL database:"
+        find $GITHUB_WORKSPACE -name "*.sarif" -o -name "*.zip" -type f 2>/dev/null
       if: always()
 
     - name: Upload SARIF results
@@ -54,4 +78,11 @@ jobs:
       if: always()
       with:
         sarif_file: sarif-results/javascript.sarif
-        category: "/language:javascript" 
+        category: "/language:javascript"
+
+    - name: Report Analysis Status
+      if: always()
+      run: |
+        echo "=== Analysis Complete ==="
+        echo "Checking final state of SARIF files:"
+        find $GITHUB_WORKSPACE -name "*.sarif" -type f -exec ls -l {} \; 
