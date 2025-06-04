@@ -28,14 +28,14 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
+      uses: github/codeql-action/init@v3
       with:
         languages: ${{ matrix.language }}
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
+      uses: github/codeql-action/analyze@v3
       with:
-        category: "/language:${{matrix.language}}"
+        category: "/language:${{matrix.language}}/analysis"
         output: 'sarif-results'
 
     - name: Debug Environment
@@ -74,11 +74,11 @@ jobs:
       if: always()
 
     - name: Upload SARIF results
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: sarif-results/javascript.sarif
-        category: "/language:javascript"
+        category: "/language:${{matrix.language}}/upload"
 
     - name: Report Analysis Status
       if: always()
