@@ -42,14 +42,7 @@ jobs:
       run: |
         echo "=== SARIF File Information ==="
         echo "Workspace: ${{ github.workspace }}"
-        echo "Looking for SARIF files in sarif-results directory:"
-        ls -la "${{ github.workspace }}/sarif-results"
-        echo "Full SARIF file paths:"
-        find "${{ github.workspace }}/sarif-results" -name "*.sarif" -type f
-
-    - name: Upload SARIF as Artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: sarif-results
-        path: "${{ github.workspace }}/sarif-results/*.sarif"
-        retention-days: 1 
+        echo "Contents of workspace:"
+        ls -la "${{ github.workspace }}"
+        echo "Looking for all SARIF files:"
+        find "${{ github.workspace }}" -name "*.sarif" -type f -exec ls -l {} \; 
