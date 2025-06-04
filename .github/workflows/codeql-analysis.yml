@@ -33,4 +33,19 @@ jobs:
         languages: ${{ matrix.language }}
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3 
+      uses: github/codeql-action/analyze@v3
+      with:
+        output: sarif-results
+        upload: false
+
+    - name: Save SARIF file
+      run: |
+        mkdir -p sarif-output
+        cp sarif-results/*.sarif sarif-output/
+        echo "SARIF files saved to sarif-output directory:"
+        ls -l sarif-output/
+
+    - name: Upload SARIF to GitHub
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: sarif-output/*.sarif 
