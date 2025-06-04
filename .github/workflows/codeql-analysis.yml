@@ -20,11 +20,6 @@ jobs:
       fail-fast: false
       matrix:
         language: [ 'javascript', 'go', 'java' ]
-        include:
-          - language: javascript
-            queries: .github/codeql/custom-queries/js
-          - language: go
-            queries: .github/codeql/custom-queries/go
 
     steps:
     - name: Checkout repository
@@ -56,8 +51,7 @@ jobs:
       uses: github/codeql-action/init@v3
       with:
         languages: ${{ matrix.language }}
-        queries: security-extended,security-and-quality,${{ matrix.queries }}
-        config-file: .github/codeql/codeql-config.yml
+        queries: security-extended
 
     - name: Build Packages
       run: |
@@ -82,31 +76,157 @@ jobs:
         # Find all SARIF files
         sarif_files=$(find "${{ github.workspace }}/sarif-results" -name "*${{ matrix.language }}*.sarif" -type f)
         
+        # Process each SARIF file
         for file in $sarif_files; do
           echo "Processing: $(basename $file)"
           echo "----------------------------------------"
           
-          # Group vulnerabilities by package
-          jq -r '
-            .runs[].results[] | 
-            select(.level == "error" or .level == "warning") |
-            . as $result |
-            $result.locations[0].physicalLocation.artifactLocation.uri |
-            capture("^(?<package>src/[^/]+/[^/]+)/.*$") |
-            . as $pkg |
-            "[\($result.level | ascii_upcase)] Package: \($pkg.package)\n  File: \($result.locations[0].physicalLocation.artifactLocation.uri):\($result.locations[0].physicalLocation.region.startLine)\n  Issue: \($result.message.text)"
-          ' "$file" || echo "Error processing SARIF file"
+          # For JavaScript packages (from package.json)
+          if [ "${{ matrix.language }}" == "javascript" ]; then
+            echo "JavaScript Packages:"
+            jq -r '
+              .runs[].results[] | 
+              select(.level == "error" or .level == "warning") |
+              . as $result |
+              $result.locations[0].physicalLocation.artifactLocation.uri |
+              capture("^(?<package>src/js/[^/]+)/.*$") |
+              . as $pkg |
+              "[\($result.level | ascii_upcase)] Package: \($pkg.package)\n  File: \($result.locations[0].physicalLocation.artifactLocation.uri):\($result.locations[0].physicalLocation.region.startLine)\n  Issue: \($result.message.text)"
+            ' "$file" || echo "No JavaScript issues found"
+          
+          # For Go packages (from go.mod)
+          elif [ "${{ matrix.language }}" == "go" ]; then
+            echo "Go Packages:"
+            jq -r '
+              .runs[].results[] | 
+              select(.level == "error" or .level == "warning") |
+              . as $result |
+              $result.locations[0].physicalLocation.artifactLocation.uri |
+              capture("^(?<package>src/go/pkg/[^/]+)/.*$") |
+              . as $pkg |
+              "[\($result.level | ascii_upcase)] Package: \($pkg.package)\n  File: \($result.locations[0].physicalLocation.artifactLocation.uri):\($result.locations[0].physicalLocation.region.startLine)\n  Issue: \($result.message.text)"
+            ' "$file" || echo "No Go issues found"
+          
+          # For Java packages (from pom.xml)
+          elif [ "${{ matrix.language }}" == "java" ]; then
+            echo "Java Packages:"
+            jq -r '
+              .runs[].results[] | 
+              select(.level == "error" or .level == "warning") |
+              . as $result |
+              $result.locations[0].physicalLocation.artifactLocation.uri |
+              capture("^(?<package>src/java/src/main/java/[^/]+)/.*$") |
+              . as $pkg |
+              "[\($result.level | ascii_upcase)] Package: \($pkg.package)\n  File: \($result.locations[0].physicalLocation.artifactLocation.uri):\($result.locations[0].physicalLocation.region.startLine)\n  Issue: \($result.message.text)"
+            ' "$file" || echo "No Java issues found"
+          fi
           
           # Count issues per package
           echo -e "\nVulnerabilities by Package:"
-          jq -r '
+          if [ "${{ matrix.language }}" == "javascript" ]; then
+            package_pattern="src/js/[^/]+"
+          elif [ "${{ matrix.language }}" == "go" ]; then
+            package_pattern="src/go/pkg/[^/]+"
+          else
+            package_pattern="src/java/src/main/java/[^/]+"
+          fi
+          
+          jq -r --arg pattern "$package_pattern" '
             .runs[].results[] |
             select(.level == "error" or .level == "warning") |
             .locations[0].physicalLocation.artifactLocation.uri |
-            capture("^(?<package>src/[^/]+/[^/]+)/.*$") |
+            capture("^(?<package>\($pattern))/.*$") |
             .package
           ' "$file" | sort | uniq -c | awk "{printf(\"  %s: %s issues\n\", \$2, \$1)}"
           
           echo "----------------------------------------"
         done
+
+    - name: Generate Package Report
+      run: |
+        echo "=== Package Security Report ===" > package-report-${{ matrix.language }}.txt
+        echo "Language: ${{ matrix.language }}" >> package-report-${{ matrix.language }}.txt
+        echo "Analysis Date: $(date -u)" >> package-report-${{ matrix.language }}.txt
+        echo "" >> package-report-${{ matrix.language }}.txt
+        
+        # Add the analysis results
+        find "${{ github.workspace }}/sarif-results" -name "*${{ matrix.language }}*.sarif" -exec cat {} \; | \
+        jq -r '
+          .runs[].results[] |
+          select(.level == "error" or .level == "warning") |
+          "[\(.level | ascii_upcase)] \(.message.text)\n  Location: \(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine)"
+        ' >> package-report-${{ matrix.language }}.txt
+
+    - name: Upload Package Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-report-${{ matrix.language }}
+        path: package-report-${{ matrix.language }}.txt
+
+  create-evidence:
+    needs: analyze
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download Merged Results
+      uses: actions/download-artifact@v3
+      with:
+        name: merged-results
+        path: merged-results
+
+    - name: Setup JFrog CLI
+      uses: jfrog/setup-jfrog-cli@v3
+      env:
+        JF_URL: ${{ secrets.JFROG_URL }}
+        JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
+
+    - name: Create Combined Evidence
+      run: |
+        echo "=== Creating Combined Evidence ==="
+        
+        # Get all package paths
+        PACKAGE_PATHS=()
+        for path_file in merged-results/package-path-*; do
+          PACKAGE_PATHS+=($(cat "$path_file"))
+        done
+        
+        # Create combined evidence JSON
+        jq -n \
+          --arg type "https://in-toto.io/Statement/v0.1" \
+          --arg predicate_type "https://github.com/jfrog/security-scan-evidence/v0.1" \
+          --arg timestamp "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+          '{
+            "_type": $type,
+            "subject": [
+              {
+                "name": "multi-language-project",
+                "digest": {"sha256": ""}
+              }
+            ],
+            "predicateType": $predicate_type,
+            "predicate": {
+              "scanner": {
+                "uri": "https://github.com/github/codeql-action",
+                "version": "v3",
+                "timestamp": $timestamp,
+                "results": {
+                  "javascript": $(cat merged-results/*.javascript.sarif 2>/dev/null || echo "null"),
+                  "go": $(cat merged-results/*.go.sarif 2>/dev/null || echo "null"),
+                  "java": $(cat merged-results/*.java.sarif 2>/dev/null || echo "null")
+                }
+              }
+            }
+          }' > merged-results/combined-evidence.json
+        
+        # Upload combined evidence to each package
+        for package_path in "${PACKAGE_PATHS[@]}"; do
+          jf rt upload \
+            --target-props="security.scan.evidence=true" \
+            "merged-results/combined-evidence.json" \
+            "${package_path}/security-evidence.json"
+          echo "Uploaded combined evidence to ${package_path}"
+        done
+        
+        echo "=== Evidence Summary ==="
+        echo "Combined evidence file contains results for:"
+        jq -r '.predicate.scanner.results | to_entries[] | select(.value != null) | "- \(.key): \(.value.runs[].results | length) findings"' merged-results/combined-evidence.json
 

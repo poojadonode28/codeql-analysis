@@ -1,0 +1,47 @@
+name: "Test CodeQL Setup"
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/codeql/**'
+      - '.github/workflows/codeql-analysis.yml'
+
+jobs:
+  test-queries:
+    name: Test Custom Queries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        language: [ 'javascript', 'go', 'java' ]
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        packs: .github/codeql/custom-queries/${{ matrix.language }}
+
+    - name: Verify Query Pack
+      run: |
+        echo "=== Verifying ${{ matrix.language }} Query Pack ==="
+        cd .github/codeql/custom-queries/${{ matrix.language }}
+        
+        # Check qlpack.yml
+        echo "Checking qlpack.yml..."
+        if [ ! -f "qlpack.yml" ]; then
+          echo "Error: qlpack.yml not found"
+          exit 1
+        fi
+        
+        # Check query files
+        echo "Checking query files..."
+        if [ ! -d "src" ] || [ -z "$(ls -A src/*.ql 2>/dev/null)" ]; then
+          echo "Error: No query files found in src directory"
+          exit 1
+        fi
+        
+        echo "Query pack verification completed successfully" 

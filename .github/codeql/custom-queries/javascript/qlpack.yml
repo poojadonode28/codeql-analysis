@@ -1,0 +1,6 @@
+name: custom-javascript-queries
+version: 0.0.1
+dependencies:
+  codeql/javascript-all: "*"
+suites: security-extended
+extractor: javascript 

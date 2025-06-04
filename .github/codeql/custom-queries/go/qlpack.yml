@@ -1,0 +1,6 @@
+name: custom-go-queries
+version: 0.0.1
+dependencies:
+  codeql/go-all: "*"
+suites: security-extended
+extractor: go 
